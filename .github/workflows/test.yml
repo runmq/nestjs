@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install runmq
+        run: npm install runmq
+
       - name: Install dependencies
         run: npm install
 
