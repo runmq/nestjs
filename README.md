@@ -331,6 +331,12 @@ export class UserService {
 
 ---
 
+## Dashboard
+
+Monitor your queues, processors, and messages in real time with [RunMQ Pulse](https://github.com/runmq/pulse).
+
+---
+
 ## License
 
 MIT

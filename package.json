@@ -2,7 +2,7 @@
   "name": "@runmq/nestjs",
   "type": "module",
   "version": "0.1.0",
-  "description": "NestJS module for RunMQ — decorator-based processors, publisher service, and lifecycle management.",
+  "description": "NestJS module for RunMQ - a reliable, high-performance message queue library for Node.js, built on top of RabbitMQ",
   "keywords": [
     "nestjs",
     "runmq",
