@@ -47,6 +47,9 @@
   },
   "author": "https://github.com/iifawzi",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "bugs": {
     "url": "https://github.com/runmq/nestjs/issues"
   },
