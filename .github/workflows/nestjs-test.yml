@@ -3,12 +3,8 @@ name: NestJS Module Tests
 on:
   push:
     branches: [main]
-    paths:
-      - "runmq-base/nestjs/**"
   pull_request:
     branches: [main]
-    paths:
-      - "runmq-base/nestjs/**"
 
 jobs:
   test:
