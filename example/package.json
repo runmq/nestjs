@@ -1,5 +1,5 @@
 {
-  "name": "@runmq/example-nestjs",
+  "name": "runmq-example-nestjs",
   "version": "0.0.1",
   "private": true,
   "description": "Example NestJS application using nestjs-runmq",
@@ -12,7 +12,7 @@
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
-    "nestjs-runmq": "^0.1.0",
+    "nestjs-runmq": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "runmq": "^1.4.0",
     "rxjs": "^7.8.0"

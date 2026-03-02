@@ -7,7 +7,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 @Module({
   imports: [
     RunMQModule.forRoot({
-      url: 'amqp://localhost:5678',
+      url: 'amqp://guest:guest@localhost:5672',
       reconnectDelay: 3000,
       maxReconnectAttempts: 5,
       management: {

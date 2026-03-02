@@ -22,7 +22,7 @@ import { RunMQModule } from 'nestjs-runmq';
 @Module({
   imports: [
     RunMQModule.forRoot({
-      url: 'amqp://localhost:5672',
+      url: 'amqp://guest:guest@localhost:5672',
       reconnectDelay: 3000,
       maxReconnectAttempts: 5,
       management: {
@@ -106,7 +106,7 @@ export class UserService {
 
 ```typescript
 RunMQModule.forRoot({
-  url: 'amqp://localhost:5672',
+  url: 'amqp://guest:guest@localhost:5672',
   reconnectDelay: 5000,        // Optional, default: 5000ms
   maxReconnectAttempts: 5,     // Optional, default: 5
   management: {                // Optional, enables policy-based TTL
@@ -151,7 +151,7 @@ import { RunMQOptionsFactory, RunMQModuleOptions } from 'nestjs-runmq';
 export class RabbitMQConfig implements RunMQOptionsFactory {
   createRunMQOptions(): RunMQModuleOptions {
     return {
-      url: process.env.RABBITMQ_URL ?? 'amqp://localhost:5672',
+      url: process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672',
       reconnectDelay: 5000,
       maxReconnectAttempts: 5,
       management: {
@@ -274,7 +274,7 @@ import { UserModule } from './user/user.module';
 @Module({
   imports: [
     RunMQModule.forRoot({
-      url: 'amqp://localhost:5672',
+      url: 'amqp://guest:guest@localhost:5672',
       reconnectDelay: 5000,
       maxReconnectAttempts: 5,
       management: {
