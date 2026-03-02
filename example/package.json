@@ -1,0 +1,27 @@
+{
+  "name": "@runmq/example-nestjs",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Example NestJS application using @runmq/nestjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --preserve-symlinks dist/main.js",
+    "start:dev": "NODE_OPTIONS='--preserve-symlinks' ts-node -r tsconfig-paths/register src/main.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "@runmq/nestjs": "^0.1.0",
+    "reflect-metadata": "^0.2.2",
+    "runmq": "^1.4.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  }
+}
