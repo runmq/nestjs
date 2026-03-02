@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RunMQPublisherService } from '@runmq/nestjs';
+import { RunMQPublisherService } from 'nestjs-runmq';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 export interface Order {

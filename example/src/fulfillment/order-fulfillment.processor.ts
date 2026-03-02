@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Processor, ProcessMessage, RunMQMessageContent } from '@runmq/nestjs';
+import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
 import { Order } from '../orders/orders.service';
 
 @Processor({

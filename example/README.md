@@ -1,6 +1,6 @@
 # Example: NestJS Order System
 
-A minimal NestJS application demonstrating `@runmq/nestjs`. It models a simple order system where:
+A minimal NestJS application demonstrating `nestjs-runmq`. It models a simple order system where:
 
 - `POST /orders` creates an order and publishes an `order.created` message
 - **`OrderFulfillmentProcessor`** subscribes to `order.created` and handles fulfillment

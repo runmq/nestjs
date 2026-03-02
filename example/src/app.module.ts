@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RunMQModule } from '@runmq/nestjs';
+import { RunMQModule } from 'nestjs-runmq';
 import { OrdersModule } from './orders/orders.module';
 import { FulfillmentModule } from './fulfillment/fulfillment.module';
 import { NotificationsModule } from './notifications/notifications.module';

@@ -1,11 +1,11 @@
-# @runmq/nestjs
+# nestjs-runmq
 
 NestJS module for [RunMQ](https://github.com/runmq/queue) — decorator-based message processors, an injectable publisher service, and automatic lifecycle management.
 
 ## Installation
 
 ```bash
-npm install @runmq/nestjs runmq
+npm install nestjs-runmq runmq
 ```
 
 ---
@@ -17,7 +17,7 @@ npm install @runmq/nestjs runmq
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { RunMQModule } from '@runmq/nestjs';
+import { RunMQModule } from 'nestjs-runmq';
 
 @Module({
   imports: [
@@ -47,7 +47,7 @@ Decorate a class with `@Processor()` and mark the handler method with `@ProcessM
 ```typescript
 // email.processor.ts
 import { Injectable } from '@nestjs/common';
-import { Processor, ProcessMessage, RunMQMessageContent } from '@runmq/nestjs';
+import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
 
 @Processor({
   topic: 'user.created',
@@ -85,7 +85,7 @@ Inject `RunMQPublisherService` anywhere in your app:
 ```typescript
 // user.service.ts
 import { Injectable } from '@nestjs/common';
-import { RunMQPublisherService } from '@runmq/nestjs';
+import { RunMQPublisherService } from 'nestjs-runmq';
 
 @Injectable()
 export class UserService {
@@ -145,7 +145,7 @@ RunMQModule.forRootAsync({
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { RunMQOptionsFactory, RunMQModuleOptions } from '@runmq/nestjs';
+import { RunMQOptionsFactory, RunMQModuleOptions } from 'nestjs-runmq';
 
 @Injectable()
 export class RabbitMQConfig implements RunMQOptionsFactory {
@@ -202,7 +202,7 @@ Parameter decorator. Injects the raw `RunMQ` instance for advanced use cases:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { InjectRunMQ } from '@runmq/nestjs';
+import { InjectRunMQ } from 'nestjs-runmq';
 import { RunMQ } from 'runmq';
 
 @Injectable()
@@ -257,7 +257,7 @@ import {
   RabbitMQManagementConfig,
   RunMQLogger,
   RunMQ,
-} from '@runmq/nestjs';
+} from 'nestjs-runmq';
 ```
 
 ---
@@ -267,7 +267,7 @@ import {
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { RunMQModule } from '@runmq/nestjs';
+import { RunMQModule } from 'nestjs-runmq';
 import { EmailModule } from './email/email.module';
 import { UserModule } from './user/user.module';
 
@@ -293,7 +293,7 @@ export class AppModule {}
 ```typescript
 // email/email.processor.ts
 import { Injectable } from '@nestjs/common';
-import { Processor, ProcessMessage, RunMQMessageContent } from '@runmq/nestjs';
+import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
 
 @Processor({ topic: 'user.created', name: 'emailService', consumersCount: 2, attempts: 3 })
 @Injectable()
@@ -317,7 +317,7 @@ export class EmailModule {}
 ```typescript
 // user/user.service.ts
 import { Injectable } from '@nestjs/common';
-import { RunMQPublisherService } from '@runmq/nestjs';
+import { RunMQPublisherService } from 'nestjs-runmq';
 
 @Injectable()
 export class UserService {
