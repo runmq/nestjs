@@ -231,6 +231,8 @@ export class OrderProcessor {
 
 When `usePoliciesForDelay: true` and the `management` config is provided, RunMQ uses RabbitMQ policies (instead of hard-coded queue TTLs) to control the retry delay. The practical benefit: you can change `attemptsDelay` later **without** deleting and recreating queues.
 
+> 💡 **Tune retries from the dashboard.** With this combo enabled, [RunMQ Pulse](https://github.com/runmq/pulse) lets you adjust retry delays **dynamically, at runtime, straight from the UI** — no redeploys, no queue surgery. Hit a noisy hour in production? Bump the delay live, watch the queues drain, and dial it back when things settle.
+
 If you only set one of the two, RunMQ falls back to the safe default (queue-based TTL).
 
 ---
