@@ -1,8 +1,8 @@
 # nestjs-runmq
 
-NestJS module for [RunMQ](https://github.com/runmq/queue) — decorator-based message processors, an injectable publisher service, and automatic lifecycle management.
+The official NestJS module for [RunMQ](https://github.com/runmq/queue) — a reliable, high-performance message queue for Node.js built on top of RabbitMQ.
 
-## Installation
+This package gives you the full power of RunMQ with the NestJS developer experience you'd expect: decorator-based processors, an injectable publisher, automatic discovery, and a lifecycle that's wired into your app.
 
 ```bash
 npm install nestjs-runmq runmq
@@ -12,7 +12,7 @@ npm install nestjs-runmq runmq
 
 ## Quick Start
 
-### 1. Register the Module
+### 1. Register the module
 
 ```typescript
 // app.module.ts
@@ -23,8 +23,6 @@ import { RunMQModule } from 'nestjs-runmq';
   imports: [
     RunMQModule.forRoot({
       url: 'amqp://guest:guest@localhost:5672',
-      reconnectDelay: 3000,
-      maxReconnectAttempts: 5,
       management: {
         url: 'http://localhost:15672',
         username: 'guest',
@@ -36,13 +34,11 @@ import { RunMQModule } from 'nestjs-runmq';
 export class AppModule {}
 ```
 
-RunMQ connects automatically when the app starts and disconnects cleanly on shutdown.
+`RunMQModule` is **global** — register it once and you can inject the publisher (or processors) anywhere. The connection is opened during bootstrap and closed gracefully on shutdown, so you don't need to manage it yourself.
 
----
+### 2. Define a processor
 
-### 2. Create a Processor
-
-Decorate a class with `@Processor()` and mark the handler method with `@ProcessMessage()`:
+A processor is just a regular `@Injectable()` class with two decorators on top: `@Processor()` to describe the queue, and `@ProcessMessage()` to mark the handler.
 
 ```typescript
 // email.processor.ts
@@ -55,12 +51,13 @@ import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
   consumersCount: 2,
   attempts: 3,
   attemptsDelay: 2000,
+  usePoliciesForDelay: true,
 })
 @Injectable()
 export class EmailProcessor {
   @ProcessMessage()
   async handle(message: RunMQMessageContent<{ email: string; name: string }>) {
-    console.log(`Sending welcome email to ${message.message.email}`);
+    await sendWelcomeEmail(message.message.email, message.message.name);
   }
 }
 ```
@@ -68,22 +65,15 @@ export class EmailProcessor {
 Register it as a provider in any module:
 
 ```typescript
-@Module({
-  providers: [EmailProcessor],
-})
+@Module({ providers: [EmailProcessor] })
 export class EmailModule {}
 ```
 
-The processor is discovered and registered automatically on startup — no manual wiring needed.
+That's it. On startup, the explorer scans your providers, finds every `@Processor()`, and registers it with RunMQ. No manual wiring, no `forFeature()` boilerplate.
 
----
-
-### 3. Publish Messages
-
-Inject `RunMQPublisherService` anywhere in your app:
+### 3. Publish from anywhere
 
 ```typescript
-// user.service.ts
 import { Injectable } from '@nestjs/common';
 import { RunMQPublisherService } from 'nestjs-runmq';
 
@@ -92,7 +82,7 @@ export class UserService {
   constructor(private readonly publisher: RunMQPublisherService) {}
 
   async createUser(email: string, name: string) {
-    // ... save user
+    // ...persist user
     this.publisher.publish('user.created', { email, name });
   }
 }
@@ -102,14 +92,14 @@ export class UserService {
 
 ## Configuration
 
-### Static (`forRoot`)
+### `forRoot` — static config
 
 ```typescript
 RunMQModule.forRoot({
   url: 'amqp://guest:guest@localhost:5672',
-  reconnectDelay: 5000,        // Optional, default: 5000ms
-  maxReconnectAttempts: 5,     // Optional, default: 5
-  management: {                // Optional, enables policy-based TTL
+  reconnectDelay: 5000,         // ms between reconnect attempts (default: 5000)
+  maxReconnectAttempts: 5,      // give up after N attempts (default: 5)
+  management: {                 // optional, but highly recommended
     url: 'http://localhost:15672',
     username: 'guest',
     password: 'guest',
@@ -117,23 +107,24 @@ RunMQModule.forRoot({
 })
 ```
 
-### Async (`forRootAsync`)
+> **Tip:** Providing the `management` block enables policy-based retry delays, which let you change `attemptsDelay` on the fly without re-declaring queues. See [Policy-based delays](#policy-based-retry-delays) below.
 
-Load configuration at runtime — e.g., from environment variables via `@nestjs/config`:
+### `forRootAsync` — runtime config
+
+Use this when your config lives in environment variables, a config service, or anywhere asynchronous.
+
+**With a factory** (the common case with `@nestjs/config`):
 
 ```typescript
-// app.module.ts
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 RunMQModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => ({
-    url: config.get('RABBITMQ_URL'),
-    reconnectDelay: config.get('RABBITMQ_RECONNECT_DELAY', 5000),
-    maxReconnectAttempts: config.get('RABBITMQ_MAX_RECONNECT_ATTEMPTS', 5),
+    url: config.getOrThrow('RABBITMQ_URL'),
     management: {
-      url: config.get('RABBITMQ_MANAGEMENT_URL'),
+      url: config.getOrThrow('RABBITMQ_MANAGEMENT_URL'),
       username: config.get('RABBITMQ_MANAGEMENT_USER', 'guest'),
       password: config.get('RABBITMQ_MANAGEMENT_PASS', 'guest'),
     },
@@ -141,7 +132,7 @@ RunMQModule.forRootAsync({
 })
 ```
 
-#### `useClass`
+**With a class** that implements `RunMQOptionsFactory`:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -150,55 +141,138 @@ import { RunMQOptionsFactory, RunMQModuleOptions } from 'nestjs-runmq';
 @Injectable()
 export class RabbitMQConfig implements RunMQOptionsFactory {
   createRunMQOptions(): RunMQModuleOptions {
-    return {
-      url: process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672',
-      reconnectDelay: 5000,
-      maxReconnectAttempts: 5,
-      management: {
-        url: process.env.RABBITMQ_MANAGEMENT_URL ?? 'http://localhost:15672',
-        username: process.env.RABBITMQ_MANAGEMENT_USER ?? 'guest',
-        password: process.env.RABBITMQ_MANAGEMENT_PASS ?? 'guest',
-      },
-    };
+    return { url: process.env.RABBITMQ_URL! };
   }
 }
 
-RunMQModule.forRootAsync({ useClass: RabbitMQConfig })
-```
-
-#### `useExisting`
-
-```typescript
-RunMQModule.forRootAsync({ useExisting: RabbitMQConfig })
+RunMQModule.forRootAsync({ useClass: RabbitMQConfig });
+// or, to reuse an instance already provided elsewhere:
+RunMQModule.forRootAsync({ useExisting: RabbitMQConfig });
 ```
 
 ---
 
-## Decorators
+## Processors in depth
 
-### `@Processor(options)`
+### Anatomy of `@Processor()`
 
-Class-level decorator. Marks a class as a RunMQ message processor.
+| Option | Type | Default | What it does |
+|--------|------|---------|--------------|
+| `topic` | `string` | — | The topic this processor subscribes to. |
+| `name` | `string` | — | Unique processor name. Each name gets its own dedicated queue and DLQ. |
+| `consumersCount` | `number` | `1` | How many messages this processor handles concurrently (RabbitMQ prefetch). |
+| `attempts` | `number` | `1` | Maximum delivery attempts before a message goes to the DLQ. |
+| `attemptsDelay` | `number` | `1000` | Milliseconds to wait between retries. |
+| `usePoliciesForDelay` | `boolean` | `false` | Use RabbitMQ policies for the retry delay TTL. **Recommended.** |
+| `messageSchema` | `MessageSchema` | — | Optional schema to validate incoming messages. |
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `topic` | `string` | Yes | — | Topic to subscribe to |
-| `name` | `string` | Yes | — | Unique processor name (creates an isolated queue) |
-| `consumersCount` | `number` | No | `1` | Concurrent consumers |
-| `attempts` | `number` | No | `1` | Max retry attempts |
-| `attemptsDelay` | `number` | No | `1000` | Milliseconds between retries |
-| `messageSchema` | `MessageSchema` | No | — | Optional JSON schema validation |
-| `usePoliciesForDelay` | `boolean` | No | `false` | Use RabbitMQ policies for delay queues (recommended) |
+Each `@Processor()` class must declare exactly **one** `@ProcessMessage()` method. The handler signature is:
 
-### `@ProcessMessage()`
+```typescript
+(message: RunMQMessageContent<T>) => Promise<void>
+```
 
-Method-level decorator. Marks which method handles incoming messages. Exactly **one** method per `@Processor` class must be decorated.
+If the handler throws, RunMQ retries the message according to your `attempts` / `attemptsDelay`. After the last attempt, the message is moved to that processor's dedicated DLQ — other processors on the same topic are unaffected.
 
-**Method signature**: `(message: RunMQMessageContent<T>) => Promise<void>`
+### Pub/Sub: many processors, one topic
 
-### `@InjectRunMQ()`
+Because each `@Processor()` has its own queue, you can fan out a single event to multiple independent handlers — each with its own retries, concurrency, and DLQ.
 
-Parameter decorator. Injects the raw `RunMQ` instance for advanced use cases:
+```typescript
+@Processor({ topic: 'user.created', name: 'emailService', attempts: 3 })
+@Injectable()
+export class EmailProcessor {
+  @ProcessMessage()
+  async handle(msg: RunMQMessageContent<UserCreated>) { /* ... */ }
+}
+
+@Processor({ topic: 'user.created', name: 'analyticsService', attempts: 5 })
+@Injectable()
+export class AnalyticsProcessor {
+  @ProcessMessage()
+  async handle(msg: RunMQMessageContent<UserCreated>) { /* ... */ }
+}
+```
+
+A single `publisher.publish('user.created', ...)` call delivers atomically to both queues — no need to publish twice.
+
+### Schema validation
+
+Pass a `messageSchema` to validate every message before it reaches your handler. Invalid messages are routed straight to the DLQ, so your business logic only ever sees well-formed data.
+
+```typescript
+@Processor({
+  topic: 'order.placed',
+  name: 'orderProcessor',
+  attempts: 3,
+  messageSchema: {
+    type: 'ajv',
+    failureStrategy: 'dlq',
+    schema: {
+      type: 'object',
+      required: ['orderId', 'total'],
+      properties: {
+        orderId: { type: 'string', pattern: '^ORD-[0-9]+$' },
+        total: { type: 'number', minimum: 0 },
+      },
+    },
+  },
+})
+@Injectable()
+export class OrderProcessor {
+  @ProcessMessage()
+  async handle(message: RunMQMessageContent<Order>) {
+    // message.message is guaranteed to match the schema
+  }
+}
+```
+
+### Policy-based retry delays
+
+When `usePoliciesForDelay: true` and the `management` config is provided, RunMQ uses RabbitMQ policies (instead of hard-coded queue TTLs) to control the retry delay. The practical benefit: you can change `attemptsDelay` later **without** deleting and recreating queues.
+
+If you only set one of the two, RunMQ falls back to the safe default (queue-based TTL).
+
+---
+
+## Publishing
+
+### `RunMQPublisherService`
+
+```typescript
+publisher.publish(topic: string, message: Record<string, any>, correlationId?: string): void
+```
+
+- `topic` — the topic you're publishing to. Every processor subscribed to this topic receives the message.
+- `message` — your payload. Make sure it satisfies any schemas the consumers expect.
+- `correlationId` — optional. Useful for tracing a message across services.
+
+If RunMQ isn't connected yet (e.g., you're publishing during `onModuleInit` before the app has fully booted), `publish` throws `RunMQ is not connected`. In practice, publish from inside request handlers or jobs — by then the connection is up.
+
+---
+
+## Logging
+
+`nestjs-runmq` automatically pipes RunMQ's internal logs through NestJS's built-in `Logger` under the `RunMQ` context. That means:
+
+- RunMQ's connection status, processor registration, retry attempts, and errors all appear in your normal NestJS logs.
+- Anything you've configured globally (custom log levels, JSON formatting via a logger like `nestjs-pino`, log shipping, etc.) automatically applies to RunMQ output too.
+- No extra adapter or boilerplate is needed — it's wired in for you.
+
+Example output during startup:
+
+```
+[Nest] 12345  - RunMQ                    LOG Connected to amqp://localhost:5672
+[Nest] 12345  - RunMQ                    LOG Processor "emailService" listening on user.created
+```
+
+If you swap NestJS's logger (e.g., `app.useLogger(...)`), RunMQ follows along automatically.
+
+---
+
+## Accessing the raw RunMQ instance
+
+For advanced use cases — health checks, custom diagnostics, or features not yet exposed by this module — you can inject the underlying `RunMQ` client directly:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -209,41 +283,31 @@ import { RunMQ } from 'runmq';
 export class HealthService {
   constructor(@InjectRunMQ() private readonly runmq: RunMQ) {}
 
-  check() {
-    return { rabbitmq: this.runmq.isActive() };
+  rabbitmq() {
+    return { connected: this.runmq.isActive() };
   }
 }
 ```
 
 ---
 
-## Injectable Services
-
-### `RunMQPublisherService`
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `publish` | `(topic: string, message: Record<string, any>, correlationId?: string) => void` | Publishes a message to the given topic |
-
-Throws `'RunMQ is not connected'` if called before the connection is established.
-
----
-
-## Error Handling
+## Error handling reference
 
 | Scenario | Behavior |
 |----------|----------|
-| RabbitMQ unreachable at startup | Logged via NestJS Logger, error is re-thrown |
-| `publish()` before connection | Throws `Error('RunMQ is not connected')` |
-| Duplicate `@Processor` name | Throws at startup: `Duplicate processor name: {name}` |
-| No `@ProcessMessage` in a `@Processor` class | Throws at startup: `No @ProcessMessage handler found in {ClassName}` |
-| Multiple `@ProcessMessage` in one class | Throws at startup: `Multiple @ProcessMessage handlers in {ClassName}` |
+| RabbitMQ unreachable at startup | Logged via NestJS Logger, error is re-thrown so bootstrap fails fast. |
+| `publish()` before connection is ready | Throws `Error('RunMQ is not connected')`. |
+| Two processors with the same `name` | Throws at startup: `Duplicate processor name: {name}`. |
+| `@Processor` class missing `@ProcessMessage` | Throws at startup: `No @ProcessMessage handler found in {ClassName}`. |
+| `@Processor` class with multiple `@ProcessMessage` methods | Throws at startup: `Multiple @ProcessMessage handlers in {ClassName}`. |
+
+These are intentional fail-fast checks — they catch misconfiguration before a single message is processed.
 
 ---
 
-## Re-exported Types
+## Re-exported types
 
-The following types from `runmq` are re-exported for convenience:
+For convenience, the most useful types from the `runmq` core package are re-exported here so you don't have to import from two places:
 
 ```typescript
 import {
@@ -262,78 +326,9 @@ import {
 
 ---
 
-## Full Example
-
-```typescript
-// app.module.ts
-import { Module } from '@nestjs/common';
-import { RunMQModule } from 'nestjs-runmq';
-import { EmailModule } from './email/email.module';
-import { UserModule } from './user/user.module';
-
-@Module({
-  imports: [
-    RunMQModule.forRoot({
-      url: 'amqp://guest:guest@localhost:5672',
-      reconnectDelay: 5000,
-      maxReconnectAttempts: 5,
-      management: {
-        url: 'http://localhost:15672',
-        username: 'guest',
-        password: 'guest',
-      },
-    }),
-    EmailModule,
-    UserModule,
-  ],
-})
-export class AppModule {}
-```
-
-```typescript
-// email/email.processor.ts
-import { Injectable } from '@nestjs/common';
-import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
-
-@Processor({ topic: 'user.created', name: 'emailService', consumersCount: 2, attempts: 3 })
-@Injectable()
-export class EmailProcessor {
-  @ProcessMessage()
-  async handle(message: RunMQMessageContent<{ email: string; name: string }>) {
-    console.log(`Sending welcome email to ${message.message.email}`);
-  }
-}
-```
-
-```typescript
-// email/email.module.ts
-import { Module } from '@nestjs/common';
-import { EmailProcessor } from './email.processor';
-
-@Module({ providers: [EmailProcessor] })
-export class EmailModule {}
-```
-
-```typescript
-// user/user.service.ts
-import { Injectable } from '@nestjs/common';
-import { RunMQPublisherService } from 'nestjs-runmq';
-
-@Injectable()
-export class UserService {
-  constructor(private readonly publisher: RunMQPublisherService) {}
-
-  async createUser(email: string, name: string) {
-    this.publisher.publish('user.created', { email, name });
-  }
-}
-```
-
----
-
 ## Dashboard
 
-Monitor your queues, processors, and messages in real time with [RunMQ Pulse](https://github.com/runmq/pulse).
+Want to watch your queues, processors, and DLQs in real time? Pair this module with [RunMQ Pulse](https://github.com/runmq/pulse) — a web dashboard built specifically for RunMQ.
 
 ---
 
