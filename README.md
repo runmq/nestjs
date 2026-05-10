@@ -160,7 +160,7 @@ RunMQModule.forRootAsync({ useExisting: RabbitMQConfig });
 |--------|------|---------|--------------|
 | `topic` | `string` | — | The topic this processor subscribes to. |
 | `name` | `string` | — | Unique processor name. Each name gets its own dedicated queue and DLQ. |
-| `consumersCount` | `number` | `1` | How many messages this processor handles concurrently (RabbitMQ prefetch). |
+| `consumersCount` | `number` | `1` | Concurrent consumers (independent AMQP channels) for this processor. Each consumer keeps its own prefetch window, so total in-flight = `consumersCount × prefetch`. |
 | `attempts` | `number` | `1` | Maximum delivery attempts before a message goes to the DLQ. |
 | `attemptsDelay` | `number` | `1000` | Milliseconds to wait between retries. |
 | `usePoliciesForDelay` | `boolean` | `false` | Use RabbitMQ policies for the retry delay TTL. **Recommended.** |
