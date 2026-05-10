@@ -1,5 +1,7 @@
 # nestjs-runmq
 
+> **📖 Full documentation: [runmq.github.io/docs](https://runmq.github.io/docs)**
+
 The official NestJS module for [RunMQ](https://github.com/runmq/queue) — a reliable, high-performance message queue for Node.js built on top of RabbitMQ.
 
 This package gives you the full power of RunMQ with the NestJS developer experience you'd expect: decorator-based processors, an injectable publisher, automatic discovery, and a lifecycle that's wired into your app.
