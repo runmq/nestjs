@@ -83,7 +83,7 @@ export class UserService {
 
   async createUser(email: string, name: string) {
     // ...persist user
-    this.publisher.publish('user.created', { email, name });
+    await this.publisher.publish('user.created', { email, name });
   }
 }
 ```
@@ -194,7 +194,7 @@ export class AnalyticsProcessor {
 }
 ```
 
-A single `publisher.publish('user.created', ...)` call delivers atomically to both queues — no need to publish twice.
+A single `await publisher.publish('user.created', ...)` call delivers atomically to both queues — no need to publish twice.
 
 ### Schema validation
 
@@ -242,14 +242,16 @@ If you only set one of the two, RunMQ falls back to the safe default (queue-base
 ### `RunMQPublisherService`
 
 ```typescript
-publisher.publish(topic: string, message: Record<string, any>, correlationId?: string): void
+publisher.publish(topic: string, message: Record<string, any>, correlationId?: string): Promise<void>
 ```
 
 - `topic` — the topic you're publishing to. Every processor subscribed to this topic receives the message.
 - `message` — your payload. Make sure it satisfies any schemas the consumers expect.
 - `correlationId` — optional. Useful for tracing a message across services.
 
-If RunMQ isn't connected yet (e.g., you're publishing during `onModuleInit` before the app has fully booted), `publish` throws `RunMQ is not connected`. In practice, publish from inside request handlers or jobs — by then the connection is up.
+**Confirmed delivery by default.** `publish()` returns a promise that resolves only after RabbitMQ has accepted the message and rejects on broker error (alarm state, mandatory routing failure, etc.). Always `await` the call so failures surface where you can act on them. To opt out of confirms and fall back to fire-and-forget publishing — for example, when per-publish round-trip latency matters more to you than detecting silent drops — pass `usePublisherConfirms: false` in the connection config you hand to `RunMQModule.forRoot()` / `forRootAsync()`.
+
+If RunMQ isn't connected yet (e.g., you're publishing during `onModuleInit` before the app has fully booted), `publish` rejects with `RunMQ is not connected`. In practice, publish from inside request handlers or jobs — by then the connection is up.
 
 ---
 
@@ -298,7 +300,8 @@ export class HealthService {
 | Scenario | Behavior |
 |----------|----------|
 | RabbitMQ unreachable at startup | Logged via NestJS Logger, error is re-thrown so bootstrap fails fast. |
-| `publish()` before connection is ready | Throws `Error('RunMQ is not connected')`. |
+| `publish()` before connection is ready | Promise rejects with `Error('RunMQ is not connected')`. |
+| `publish()` rejected by broker (publisher confirms enabled) | Promise rejects with the underlying broker error — `await` so your code can act on it. |
 | Two processors with the same `name` | Throws at startup: `Duplicate processor name: {name}`. |
 | `@Processor` class missing `@ProcessMessage` | Throws at startup: `No @ProcessMessage handler found in {ClassName}`. |
 | `@Processor` class with multiple `@ProcessMessage` methods | Throws at startup: `Multiple @ProcessMessage handlers in {ClassName}`. |
