@@ -1,7 +1,7 @@
 {
   "name": "nestjs-runmq",
   "type": "module",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "NestJS module for RunMQ - a reliable, high-performance message queue library for Node.js, built on top of RabbitMQ",
   "keywords": [
     "nestjs",
@@ -55,14 +55,15 @@
   },
   "homepage": "https://github.com/runmq/nestjs#readme",
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
-    "@eslint/js": "^9.29.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^10.0.4",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.1",
+    "@semantic-release/npm": "^12.0.2",
     "@semantic-release/release-notes-generator": "^11.0.7",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
@@ -89,6 +90,12 @@
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
       "@semantic-release/changelog",
+      [
+        "@semantic-release/npm",
+        {
+          "npmPublish": false
+        }
+      ],
       [
         "@semantic-release/github",
         {
