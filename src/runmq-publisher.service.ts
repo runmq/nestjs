@@ -8,10 +8,10 @@ export class RunMQPublisherService {
     @Inject(RUNMQ_INSTANCE) private readonly runmq: RunMQ,
   ) {}
 
-  publish(topic: string, message: Record<string, any>, correlationId?: string): void {
+  async publish(topic: string, message: Record<string, any>, correlationId?: string): Promise<void> {
     if (!this.runmq.isActive()) {
       throw new Error('RunMQ is not connected');
     }
-    this.runmq.publish(topic, message, correlationId);
+    await this.runmq.publish(topic, message, correlationId);
   }
 }
